@@ -1,0 +1,5 @@
+teamflow:
+  secure-cookies: false
+springdoc:
+  api-docs.enabled: true
+  swagger-ui.enabled: true
