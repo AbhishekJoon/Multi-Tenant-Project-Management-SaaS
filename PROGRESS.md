@@ -1,0 +1,73 @@
+# TeamFlow implementation progress
+
+Branch: `Test`. Initial repository contained only README.md. User changes: none at inspection.
+
+## Checklist
+
+- [x] Phase 0: repository inspection, architecture, authorization policy, initial schema design and roadmap.
+- [x] Phase 1: Spring Boot, React, PostgreSQL, Flyway, health, Docker and runnable builds.
+- [x] Phase 2: authentication, refresh rotation/replay detection, logout, profile and security tests.
+- [x] Phase 3: organizations, memberships, invitations, ownership and tenant isolation tests.
+- [x] Phase 4 core: projects and private-project authorization; advanced filters remain below.
+- [x] Phase 5 core: task lifecycle, assignment, counters, basic filters and optimistic concurrency; date-range filters remain below.
+- [x] Phase 6: persisted Kanban, keyboard handles and ordering; extended accessibility audit remains below.
+- [ ] Phase 7 complete scope: comments/activity/audit and task notifications work; invitation notices remain below.
+- [ ] Phase 8 complete scope: scoped dashboards/database aggregates/charts work; broader analytics filters remain below.
+- [ ] Phase 9: responsive UI, themes, forms and accessibility.
+- [ ] Phase 10: security audit, dependency audit and full automated validation.
+- [ ] Phase 11 complete scope: Docker/CI configuration/deployment and backup docs delivered; external release/restore drill and remote CI remain unverified.
+- [x] Phase 12 local artifacts: README, diagrams, API/deployment/security docs, screenshots and verification report. Public demo is not deployed.
+
+## Environment and commands
+
+Inspection: `git status --short --branch`, `git branch --list`, `rg --files`, `java -version`, `node --version`, `npm --version`, `docker version`. Java 21 and Node 24 are available. Maven is not on PATH. Docker CLI exists but daemon was stopped. No existing application or tests.
+
+## Current work
+
+Core MVP is implemented and verified. Final browser rerun passed. No external deployment has been performed. Resume from the remaining-work section, not from repository initialization.
+
+## Checkpoint: identity and tenant foundation
+
+Created backend Maven/Java 21 project, Flyway identity/membership schema, authentication, permission policies, organization and invitation APIs; React typed API client, auth forms, workspace selector, reusable form/modal components and design tokens. Added PostgreSQL/Mailpit Compose services and initial Dockerfiles.
+
+Validation: `backend/mvnw.cmd -B -ntp test` passed **9 tests, zero failures/skips**, using Testcontainers PostgreSQL 17. Verified migration initialization, health, anonymous rejection, login, disabled-account rejection, refresh rotation, replay family revocation, logout, two-organization membership, differing roles, invitation email binding/replay rejection, final-owner protection and admin escalation denial. `npm run build`, `npm test` (**5 tests**) and `npm run lint` passed. Docker Desktop started; PostgreSQL and Mailpit containers are running. Maven wrapper bootstrap and a test helper naming collision were fixed.
+
+Remaining foundation acceptance: full Compose application startup and completed organization management UI. Next: private projects, task integrity/concurrency, then Kanban and collaboration. Tenant foundation is validated before implementing these modules. No public deployment.
+
+## Checkpoint: projects, tasks, board, collaboration and analytics
+
+Implemented tenant-aware project management and private-project membership; task creation/editing/assignment, atomic counters, soft deletion, pagination/filtering, explicit version conflicts and transactionally ordered board movement; comments, structured activity, notification persistence, audit queries and database aggregates. Added composite foreign keys and trigram indexes in V2. React routes now cover landing/auth, workspace selection, organization/team/settings/profile, projects, task lists/details/board, notifications/activity/audit and dashboard/analytics. All core actions call real APIs. Forms use React Hook Form/Zod; modals use Radix; notifications use Sonner; charts use Recharts; boards use dnd-kit.
+
+Backend testing progressed from 9 to 18 to **21 tests**. The additional tests verify private project visibility, nested tenant/parent combinations, foreign-assignee rejection at API and database levels, stale task/board updates, concurrent task numbering, actual simultaneous update conflicts, read-only role caps, comments, scoped notifications/aggregates, soft deletion, archival, password recovery/verification, SMTP rollback and authentication throttling. A trend-query GROUP BY ambiguity was found and fixed. Backend `verify` builds the executable jar and passes security-package coverage gates (90% lines / 70% branches).
+
+Frontend `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build` pass. **9 frontend tests** cover form validation/server errors, permission rules, board loading/errors/read-only controls and keyboard drag handles. Gate coverage is limited to shared forms/permission functions: approximately 91% lines / 78% branches. It is not whole-app coverage. `npm audit --audit-level=high` reports zero vulnerabilities in the resolved npm dependency graph.
+
+## Checkpoint: Docker and real integration
+
+`docker compose up -d --build` successfully starts frontend (Nginx), backend, PostgreSQL 17 and Mailpit. Backend health is UP. A separate `teamflow-e2e` Compose project has its own PostgreSQL volume/network and ports 5174/8081/5433/8026, protecting the development workspace from test data.
+
+The first full browser run found an ambiguous test locator (Project name vs Search project names); the selector was fixed. **Both Playwright journeys then passed** against real APIs and SMTP: register, create organization, invite, second-account acceptance, private project denial, project membership, task assignment, pointer drag to Done, persistence after reload, comments, notifications, activity, mobile navigation, cross-organization denial, password reset and reset-link replay denial. No E2E API responses were mocked. A final rerun expands email verification, login/reload and organization switching and recaptures deterministic screenshots.
+
+Docker's initial Maven `dependency:go-offline` step resolved unnecessary plugin/database metadata; the Dockerfile now builds directly with a Maven cache mount. Docker application builds and health checks subsequently passed. Java and frontend sources were formatted for review. Secret-bearing DTO string representations are redacted, mail operations have timeouts, logout/reset use account locks, and refresh rotation coordinates browser tabs via Web Locks where supported.
+
+## Remaining work and release limits
+
+- Advanced project manager/date and task date-range filters; the current persisted filters are listed exactly in docs/api/README.md.
+- Global invitation inbox and pre-membership in-app invitation notifications. Email invitation accept/decline/revoke works; assignment/comment/status notifications work.
+- Self-service archive recovery and scheduled retention/purge; archived records currently remain indefinitely. Disabled accounts are enforced server-side and tested; global disablement administration UI is not implemented.
+- Broader organization/project/task form and optimistic-rollback unit coverage, cross-browser/screen-reader audits, load/query-plan benchmarks and a Java dependency CVE scan. Current integration coverage is stronger than unit breadth.
+- Shared rate limiting before multiple replicas; transactional email outbox; session-history cleanup; metrics exporter and hosted error reporting configuration.
+- Production hosting, HTTPS, production SMTP credentials, managed database backups/restore drill and remote GitHub Actions execution. CI is configured but no GitHub run/public deployment is claimed.
+
+No unresolved failing automated check is accepted as complete. Core MVP acceptance and the original broader roadmap are distinguished in docs/VERIFICATION.md. Next recommended implementation step: close the advanced filtering/invitation inbox gaps with tenant-scoped integration tests, then execute production security/load and backup-recovery gates before an external release.
+
+## Final local verification checkpoint
+
+- Backend `mvnw -B -ntp verify`: **21 passed**, zero failures/errors/skips; executable jar built; security coverage gates passed. Security package: 142/148 lines (95.9%), 55/71 branches (77.5%).
+- Frontend lint, type checking, production build and **9 tests** passed. Shared form/permission coverage: 91.3% lines, 77.58% branches; npm audit reported zero vulnerabilities.
+- Expanded Playwright rerun: **2 passed in 22 seconds**, including email verification, login using the reset password, session refresh after reload and switching between two authorized organizations, alongside the full collaboration/board/isolation workflow.
+- Development Compose rebuilt from final application sources; all four services healthy. Application: http://localhost:5173; development email: http://localhost:8025. The isolated test stack used ports 5174/8026 and a separate database volume.
+- Desktop/mobile screenshots visually inspected; chart and drawer timing artifacts corrected. Sensitive generated files/test traces are ignored. A source pattern scan found no private keys or recognizable API credentials; a random database password lives in the ignored local `.env`.
+- Architecture/API/ER/threat/deployment/backup/demo documentation and docs/VERIFICATION.md reflect actual scope and limitations. GitHub CI exists but has not run remotely. No external deployment or messages to real recipients.
+
+Local changes are organized into backend, frontend and documentation/CI commits on `Test`. No remote push was performed. The broader incomplete roadmap remains above; this checkpoint is not full production-release approval.
