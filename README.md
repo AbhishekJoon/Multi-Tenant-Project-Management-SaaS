@@ -19,6 +19,8 @@ No demo accounts or fake data are inserted. Create an account to start. Automate
 
 For **Windows development without Docker**, use the [native local setup](docs/deployment/LOCAL_WINDOWS.md). On this machine, run `powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1 -SkipBuild`; stop it with `scripts/stop-local.ps1`. The frontend, backend, database and development inbox run as local processes.
 
+For the hosted PostgreSQL option, see [Supabase setup](docs/deployment/SUPABASE.md). It keeps Spring Boot authentication and prepares a private-schema connection. Add credentials to `.env.supabase.local`, then explicitly choose `scripts/start-local.ps1 -Database Supabase`; the default remains the running native local database until that switch.
+
 ### Docker option (for later)
 
 Requirements: Docker Desktop/Engine with Compose **2.24.4+**. Development outside Docker also requires Java 21 and Node 24; Maven is supplied by the wrapper.

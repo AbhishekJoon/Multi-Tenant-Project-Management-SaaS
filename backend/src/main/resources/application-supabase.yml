@@ -1,0 +1,31 @@
+# Activate alongside dev for a local frontend, or alone for a production backend.
+spring:
+  datasource:
+    url: ${SUPABASE_DB_URL}
+    username: ${SUPABASE_DB_USER}
+    password: ${SUPABASE_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${SUPABASE_DB_POOL_SIZE:5}
+      minimum-idle: ${SUPABASE_DB_MIN_IDLE:1}
+      connection-timeout: 10000
+      validation-timeout: 3000
+      idle-timeout: 120000
+      max-lifetime: 600000
+      keepalive-time: 60000
+      data-source-properties:
+        currentSchema: teamflow,extensions
+        sslmode: verify-full
+        sslrootcert: ${SUPABASE_DB_SSL_ROOT_CERT}
+        connectTimeout: 10
+        socketTimeout: 30
+        tcpKeepAlive: true
+        ApplicationName: teamflow
+  jpa:
+    properties:
+      hibernate.default_schema: teamflow
+  flyway:
+    default-schema: teamflow
+    schemas: teamflow
+    create-schemas: false
+    clean-disabled: true
+    locations: classpath:db/migration,classpath:db/supabase

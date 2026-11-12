@@ -23,17 +23,52 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @SpringBootTest
 @AutoConfigureMockMvc
 public abstract class ApiTestSupport {
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+  static final String EXTERNAL_URL = System.getenv("TEAMFLOW_TEST_DATABASE_URL");
+  static final PostgreSQLContainer<?> POSTGRES;
 
   static {
-    POSTGRES.start();
+    if (EXTERNAL_URL == null || EXTERNAL_URL.isBlank()) {
+      POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+      if ("true".equals(System.getenv("TEAMFLOW_TEST_PRIVATE_SCHEMA"))) {
+        POSTGRES.withInitScript("supabase-test-init.sql");
+      }
+      POSTGRES.start();
+    } else {
+      POSTGRES = null;
+      if (!EXTERNAL_URL.matches(
+          "jdbc:postgresql://(localhost|127\\.0\\.0\\.1):[0-9]+/teamflow_test_[A-Za-z0-9_]+")) {
+        throw new IllegalStateException(
+            "External tests require an explicitly named local teamflow_test_* database, never a"
+                + " hosted or development database.");
+      }
+    }
   }
 
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry r) {
-    r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-    r.add("spring.datasource.username", POSTGRES::getUsername);
-    r.add("spring.datasource.password", POSTGRES::getPassword);
+    r.add("spring.datasource.url", () -> POSTGRES == null ? EXTERNAL_URL : POSTGRES.getJdbcUrl());
+    r.add(
+        "spring.datasource.username",
+        () ->
+            POSTGRES == null
+                ? System.getenv("TEAMFLOW_TEST_DATABASE_USER")
+                : POSTGRES.getUsername());
+    r.add(
+        "spring.datasource.password",
+        () ->
+            POSTGRES == null
+                ? System.getenv("TEAMFLOW_TEST_DATABASE_PASSWORD")
+                : POSTGRES.getPassword());
+    if ("true".equals(System.getenv("TEAMFLOW_TEST_PRIVATE_SCHEMA"))) {
+      r.add(
+          "spring.datasource.hikari.data-source-properties.currentSchema",
+          () -> "teamflow,extensions");
+      r.add("spring.jpa.properties.hibernate.default_schema", () -> "teamflow");
+      r.add("spring.flyway.default-schema", () -> "teamflow");
+      r.add("spring.flyway.schemas", () -> "teamflow");
+      r.add("spring.flyway.create-schemas", () -> false);
+      r.add("spring.flyway.locations", () -> "classpath:db/migration,classpath:db/supabase");
+    }
     r.add("teamflow.bcrypt-cost", () -> 4);
     r.add("teamflow.secure-cookies", () -> false);
     r.add("debug", () -> false);
