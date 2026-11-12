@@ -66,4 +66,10 @@ powershell -ExecutionPolicy Bypass -File scripts/test-backend-local.ps1 -Private
 
 This runs the backend suite against private-schema migrations, tests API-role permission denial (including newly created tables), and checks configuration guards. It creates/removes NOLOGIN role fixtures only when they did not already exist, and removes only the randomly named test database. The test harness refuses external URLs and non-test database names. It does not run Docker and never targets Supabase or the development database. The default CI Testcontainers suite remains available separately.
 
-Local results cannot establish hosted network access, real certificate trust, pooler authentication or dashboard API settings. Those checks remain pending until the project's connection details are supplied. Run a hosted health/auth/tenant-isolation smoke test with controlled accounts after connecting; do not represent the local simulation as a verified Supabase deployment.
+Local results alone cannot establish hosted network access, real certificate trust, pooler authentication or dashboard API settings. Run a hosted health/auth/tenant-isolation smoke test with controlled accounts after connecting; do not represent the local simulation as a verified Supabase deployment.
+
+## Current hosted connection verification
+
+On 12 November 2026, the supplied credentials successfully authenticated through the Session pooler with verified client TLS 1.3. The bootstrap and all three Flyway migrations completed in `teamflow`. Read-only checks confirmed 15 application/migration tables and denied schema/user-table access for `anon`, `authenticated` and `service_role`. The native frontend and backend now use this hosted database; health is UP and an unknown bearer token receives 401. The old native database is preserved and stopped. Restart this setup with `scripts/start-local.ps1 -Database Supabase -SkipBuild`.
+
+No demo users were inserted into the hosted application database. Dashboard exposed-schema settings were not inspected; keep `teamflow` outside the Data API. Application hosting is still local, and full production readiness is not implied by successful database connection.
