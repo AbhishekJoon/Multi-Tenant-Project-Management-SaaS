@@ -46,4 +46,12 @@ Broader form/rollback unit tests, cross-browser/screen-reader testing, load/quer
 
 ## Run and resume
 
-Follow the [root setup guide](../README.md) to start `docker compose up -d --build --wait`. Open localhost:5173 and register; local email is in Mailpit on port 8025. No shared demo credentials exist. Resume the broader backlog from [PROGRESS.md](../PROGRESS.md), prioritizing missing filters/invitation notices and release security/recovery evidence.
+Follow the [root setup guide](../README.md) and [native Windows instructions](deployment/LOCAL_WINDOWS.md) for the current Docker-free workflow. Open localhost:5173 and register; local email is in Mailpit on port 8025. No shared demo credentials exist. Resume the broader backlog from [PROGRESS.md](../PROGRESS.md), prioritizing missing filters/invitation notices and release security/recovery evidence.
+
+## Supabase preparation and native-mode update
+
+The user subsequently deferred Docker and selected **Supabase PostgreSQL with Spring Boot authentication**. See [native Windows startup](deployment/LOCAL_WINDOWS.md) and [Supabase setup](deployment/SUPABASE.md). Docker services remain stopped, and the application continues to use native local PostgreSQL until real Supabase credentials and a matching CA certificate are supplied.
+
+The private-schema native PostgreSQL verification passed **29 tests with zero failures/errors/skips**, including the original business/security suite, five configuration-guard tests and three schema/API-role security tests. The ordinary public-schema regression passed **26 tests**, with the three private-schema-only cases intentionally skipped. Both runs passed the security coverage gates. GitHub CI is configured to test both schema modes via Testcontainers; no remote run is claimed.
+
+The hosted connection, TLS trust chain, Supavisor authentication and dashboard Data API settings remain unverified. No Supabase project was created, no cloud database was modified, and no local data was uploaded. Existing Flyway migrations were not edited; the new grants migration is selected only by the Supabase profile.

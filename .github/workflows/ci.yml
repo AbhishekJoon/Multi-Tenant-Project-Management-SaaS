@@ -8,6 +8,9 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        schema: [public, supabase]
     defaults:
       run:
         working-directory: backend
@@ -21,10 +24,11 @@ jobs:
       - run: chmod +x mvnw && ./mvnw -B -ntp verify
         env:
           DEBUG: 'false'
+          TEAMFLOW_TEST_PRIVATE_SCHEMA: ${{ matrix.schema == 'supabase' }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: backend-reports
+          name: backend-reports-${{ matrix.schema }}
           path: |
             backend/target/surefire-reports
             backend/target/site/jacoco

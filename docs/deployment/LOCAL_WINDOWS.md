@@ -24,6 +24,10 @@ powershell -ExecutionPolicy Bypass -File scripts/stop-local.ps1
 
 The stop script verifies saved process IDs, executable paths and creation times before stopping them. It stops only the project-local PostgreSQL cluster and retains data. Logs are in `.tools/native/*.log`. Temporary password initialization files are removed after use. Keep `.tools` and `.env` out of Git; neither is a backup strategy.
 
+To use hosted Supabase PostgreSQL later, follow [the Supabase setup](SUPABASE.md) and explicitly choose `scripts/start-local.ps1 -Database Supabase`. That mode starts Java, Vite and Mailpit only and leaves local PostgreSQL alone. Existing Spring Boot login remains in use.
+
 On another Windows machine, use Java 21 and Node 24, run `npm ci` in frontend, copy `.env.example` to `.env` and set a unique database password. Download the Windows ZIP from [PostgreSQL's official Windows download page](https://www.postgresql.org/download/windows/) (EDB binary archives) and the Windows executable from [Mailpit's installation instructions](https://mailpit.axllent.org/docs/install/). Extract them to the paths above. No system-wide installation or Windows service is required. PostgreSQL 17 includes the required `pg_trgm` extension. Without an existing backup the backend's Flyway migrations initialize an empty database.
 
 The PostgreSQL/Mailpit downloads are machine-local tooling, not application dependencies shipped to users. Backend integration tests still use Testcontainers and require Docker when you choose to run that test suite later.
+
+For tests without Docker, `powershell -ExecutionPolicy Bypass -File scripts/test-backend-local.ps1` creates a disposable native test database, runs the backend suite and cleans it up. Add `-PrivateSchema` to exercise the Supabase schema/permission migrations locally. Neither mode targets the normal development database or a hosted database.

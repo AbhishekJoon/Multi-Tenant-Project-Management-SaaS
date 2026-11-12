@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
+!.env.supabase.example
+.secrets/
 **/node_modules/
 **/target/
 **/dist/
