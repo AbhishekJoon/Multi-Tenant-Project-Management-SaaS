@@ -17,6 +17,10 @@ No demo accounts or fake data are inserted. Create an account to start. Automate
 
 ## Start locally
 
+For **Windows development without Docker**, use the [native local setup](docs/deployment/LOCAL_WINDOWS.md). On this machine, run `powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1 -SkipBuild`; stop it with `scripts/stop-local.ps1`. The frontend, backend, database and development inbox run as local processes.
+
+### Docker option (for later)
+
 Requirements: Docker Desktop/Engine with Compose **2.24.4+**. Development outside Docker also requires Java 21 and Node 24; Maven is supplied by the wrapper.
 
 ```powershell

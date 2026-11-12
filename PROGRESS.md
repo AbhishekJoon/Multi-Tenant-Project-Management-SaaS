@@ -71,3 +71,13 @@ No unresolved failing automated check is accepted as complete. Core MVP acceptan
 - Architecture/API/ER/threat/deployment/backup/demo documentation and docs/VERIFICATION.md reflect actual scope and limitations. GitHub CI exists but has not run remotely. No external deployment or messages to real recipients.
 
 Local changes are organized into backend, frontend and documentation/CI commits on `Test`. No remote push was performed. The broader incomplete roadmap remains above; this checkpoint is not full production-release approval.
+
+## Runtime preference: native Windows development
+
+The user requested local processes and deferred Docker. All TeamFlow Compose services were stopped, and their database was backed up to the ignored `.tools/native/teamflow-backup.sql` before shutdown. The original Docker volume remains intact. Do not restart Docker services for normal development without a new request.
+
+Installed portable PostgreSQL 17.11 from the official PostgreSQL/EDB Windows binary distribution and Mailpit 1.33.1 from its official release (SHA256 verified) inside `.tools/native`. Initialized a loopback-only PostgreSQL cluster and restored the existing database/migration history. No system-wide service installation or committed credentials.
+
+Added `scripts/start-local.ps1` and `scripts/stop-local.ps1`, with hidden background processes, saved PID/executable/creation-time checks, temporary password-file cleanup, environment restoration and readiness checks. Java runs the existing backend jar on 8080; Node runs Vite on 5173; native PostgreSQL uses 5432; native Mailpit uses 1025/8025. Vite API targets use 127.0.0.1 to match the backend's explicit IPv4 loopback binding. See docs/deployment/LOCAL_WINDOWS.md.
+
+Observed native checks: frontend HTTP 200, backend health UP, Vite-to-backend health proxy UP and Mailpit readiness HTTP 200. Startup testing caught and fixed PowerShell process-tree waiting and nested JSON-array enumeration issues. The complete start/stop/restart cycle passed: all five local ports closed on stop, then readiness checks passed after restart with data retained. `docker compose ps --status running` returned no TeamFlow containers. Frontend lint/type checking passed with `npm.cmd` (the shell blocks npm.ps1 under its execution policy). Docker/Testcontainers suites are deferred in this mode.
