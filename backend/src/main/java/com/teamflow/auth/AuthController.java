@@ -6,11 +6,16 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@ConditionalOnProperty(
+    name = "teamflow.auth.provider",
+    havingValue = "local",
+    matchIfMissing = true)
 @RequestMapping("/api/v1/auth")
 public class AuthController {
   private final AuthService auth;
@@ -126,6 +131,12 @@ public class AuthController {
   @ResponseStatus(HttpStatus.ACCEPTED)
   void forgot(@Valid @RequestBody EmailRequest body) {
     auth.forgot(body.email());
+  }
+
+  @PostMapping("/resend-confirmation")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  void resendByEmail(@Valid @RequestBody EmailRequest body) {
+    auth.resendByEmail(body.email());
   }
 
   @PostMapping("/reset-password")

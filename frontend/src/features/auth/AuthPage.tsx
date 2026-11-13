@@ -16,11 +16,16 @@ export default function AuthPage({ mode }: { mode: string }) {
     "reset-password": "Choose a new password",
     "verify-email": "Verify your email",
     "accept-invitation": "Your team is waiting",
+    "resend-confirmation": "Confirm your email",
   };
   const fields: Field[] = [];
   if (mode === "register")
     fields.push({ name: "name", label: "Full name", required: true, max: 100 });
-  if (["login", "register", "forgot-password"].includes(mode))
+  if (
+    ["login", "register", "forgot-password", "resend-confirmation"].includes(
+      mode,
+    )
+  )
     fields.push({
       name: "email",
       label: "Email address",
@@ -109,24 +114,31 @@ export default function AuthPage({ mode }: { mode: string }) {
               }
               onSubmit={async (values) => {
                 if (mode === "login" || mode === "register") {
-                  setSession(
-                    await api<{ accessToken: string; user: User }>(
-                      `/auth/${mode}`,
-                      "POST",
-                      values,
-                      false,
-                    ),
-                  );
+                  const result = await api<{
+                    accessToken: string;
+                    user: User;
+                    confirmationRequired?: boolean;
+                  }>(`/auth/${mode}`, "POST", values, false);
+                  if (result.confirmationRequired) {
+                    setMessage(
+                      "Check your email to confirm your account. Open the link in this browser, then sign in.",
+                    );
+                    return;
+                  }
+                  setSession(result);
                   navigate(
                     returnTo.startsWith("/accept-invitation?")
                       ? returnTo
                       : "/workspaces",
                     { replace: true },
                   );
-                } else if (mode === "forgot-password") {
-                  await api("/auth/forgot-password", "POST", values, false);
+                } else if (
+                  mode === "forgot-password" ||
+                  mode === "resend-confirmation"
+                ) {
+                  await api(`/auth/${mode}`, "POST", values, false);
                   setMessage(
-                    "If an eligible account exists, a reset link has been sent. Please check your inbox.",
+                    "If an eligible account exists, an email link has been sent. Open it in this browser.",
                   );
                 } else if (
                   mode === "reset-password" ||
@@ -135,9 +147,12 @@ export default function AuthPage({ mode }: { mode: string }) {
                   await api(
                     `/auth/${mode}`,
                     "POST",
-                    { ...values, token: params.get("token") ?? "" },
+                    mode === "reset-password" && params.get("supabase") === "1"
+                      ? values
+                      : { ...values, token: params.get("token") ?? "" },
                     false,
                   );
+                  if (mode === "reset-password") setSession(null);
                   setMessage(
                     mode === "verify-email"
                       ? "Your email is verified."
@@ -180,6 +195,9 @@ export default function AuthPage({ mode }: { mode: string }) {
             <>
               <Link className="text-link" to="/forgot-password">
                 Forgot password?
+              </Link>
+              <Link className="text-link" to="/resend-confirmation">
+                Need a confirmation email?
               </Link>
               <p className="auth-footer">
                 New here?{" "}

@@ -1,6 +1,16 @@
-# Supabase PostgreSQL with the Spring Boot backend
+# Supabase PostgreSQL and Auth with Spring Boot
 
-The chosen architecture is React → Spring Boot → Supabase PostgreSQL. Spring Boot continues to own registration, login, refresh/recovery, organizations and tenant/project authorization. Supabase Auth, client-side database requests, Storage and Realtime are not enabled by this change. No Supabase JavaScript SDK or browser API keys are needed.
+React calls Spring Boot, which delegates signup, login, refresh and recovery to Supabase Auth and stores application data in Supabase PostgreSQL. Spring Boot retains tenant/project authorization. Access tokens stay in browser memory and refresh tokens in an HttpOnly cookie. No direct browser database access, client SDK, Storage or Realtime is introduced.
+
+## Authentication configuration
+
+Set `SUPABASE_URL` to the HTTPS project origin and `SUPABASE_PUBLISHABLE_KEY` to its public API key in `.env.supabase.local`. A legacy anon key also works; secret/service-role keys are rejected. These are additional to the PostgreSQL credentials below.
+
+In Supabase → Authentication → URL Configuration, set the local Site URL to `http://localhost:5173` and allow `http://localhost:5173/**` for development. Production should allow only the exact callbacks `https://<app>/auth/callback?flow=signup` and `https://<app>/auth/callback?flow=recovery`, matching HTTPS `APP_ORIGIN`. Keep Email authentication enabled and default confirmation/recovery templates using `{{ .ConfirmationURL }}`. Open links in the same browser/device where requested; verifier cookies expire after one hour. Confirmation resend sends a PKCE email sign-in link for existing accounts, with account creation disabled. See [Supabase password Auth](https://supabase.com/docs/guides/auth/passwords) and [PKCE](https://supabase.com/docs/guides/auth/sessions/pkce-flow).
+
+Supabase sends authentication emails; Mailpit still receives workspace invitations locally. Production needs Auth SMTP configured in Supabase separately from invitation SMTP. Legacy passwords are not copied into Supabase. Existing users create/confirm a Supabase account with the same email, or recover an existing Supabase account; first verified login preserves application IDs/memberships and removes legacy credentials. Linked email changes need a separate account migration. User metadata never grants roles.
+
+The backend validates each token with Supabase `/auth/v1/user`, then checks project/subject/audience/role/expiry claims and `auth.sessions`/`auth.users` metadata for revocation, expiry, bans and deletion. It never writes managed auth tables. A separate runtime DB role needs read access to `auth.sessions(id,user_id,not_after)` and `auth.users(id,deleted_at,banned_until)` in addition to application privileges. Provider outages fail closed; authenticated requests incur provider latency and no validation cache is enabled. No signing secret or admin API key is needed.
 
 ## Connection details to supply
 
@@ -34,7 +44,7 @@ Run bootstrap and Flyway with the same owning database role (the dashboard's `po
 
 Keep `teamflow` **out of the Data API exposed-schema list**. If this project is used only through Spring Boot, disable the Data API in the Supabase dashboard. Do not disable it on an unrelated shared project without reviewing that project's consumers. [Supabase documents private schemas, grants and Data API configuration](https://supabase.com/docs/guides/api/securing-your-api).
 
-We do not install misleading `auth.uid()` tenant policies: the application uses Spring Boot's own opaque sessions rather than Supabase JWTs. Tenant rules remain the existing tested backend checks and composite constraints. Private schema permissions block browser/API roles from bypassing them; they do not restrict an administrator or a compromised backend database credential.
+Tenant rules remain backend membership checks and composite constraints. JDBC does not inherit the browser JWT's `auth.uid()` context. Private schema permissions block browser/API roles from bypassing the backend; they do not restrict an administrator or compromised backend database credential.
 
 ## Start locally with the hosted database, without Docker
 
@@ -47,13 +57,13 @@ powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1 -Database Supab
 
 This builds the backend, selects `dev,supabase`, and starts Java/Vite/local Mailpit. It does not start or initialize local PostgreSQL, restore a local dump, or connect the browser directly to Supabase. Stop it with `scripts/stop-local.ps1`; the script cannot stop the hosted database. It also leaves an independently running local cluster untouched in Supabase mode.
 
-On first startup, Flyway applies the original V1/V2 migrations **inside `teamflow`** and the profile-only V3 grants restriction. Hibernate validates its account mapping in that schema; JDBC also uses `teamflow,extensions`. Flyway does not create the schema automatically or baseline an existing unmanaged schema. Existing local databases remain in `public` and keep their existing Flyway history. No existing public data is automatically moved or uploaded. Plan a separate reviewed data migration if that data must transfer.
+Flyway applies V1/V2 **inside `teamflow`**, profile-only V3 grants restrictions and V4's Supabase identity mapping. Existing migrations remain unchanged. Hibernate validates its account mapping; JDBC uses `teamflow,extensions`. Flyway does not create schemas automatically or baseline unmanaged data. Existing local data stays in `public` and is not uploaded automatically.
 
 The native local database remains the default until this explicit switch. Return with `scripts/start-local.ps1 -Database Local`. Docker stays deferred.
 
 ## Hosted backend configuration
 
-For deployment, activate `supabase` without `dev`, supply the `SUPABASE_DB_*` variables plus production SMTP configuration, set the HTTPS `APP_ORIGIN`, and keep `SECURE_COOKIES=true`. Provide the CA file as a read-only mounted file. No credentials are baked into images.
+For deployment, activate `supabase` without `dev`, supply database/Auth variables plus invitation SMTP settings, set HTTPS `APP_ORIGIN`, and keep `SECURE_COOKIES=true`. Configure Auth email delivery separately in Supabase. Provide the CA file as a read-only mounted file. No credentials are baked into images.
 
 The Hikari pool is intentionally small (5 maximum / 1 minimum); it has bounded connect/socket timeouts, 10-minute connection lifetime and keepalive. It is a starting point, not an asserted Supabase plan limit. Size the sum of pools across all instances to the actual project's connection allowance, and measure latency/load before increasing it. The transaction and membership locking behavior stays unchanged. The existing rate limiter remains single-instance.
 

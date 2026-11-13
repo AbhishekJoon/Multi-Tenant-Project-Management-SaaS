@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { bootstrap, useSession } from "../services/api";
 import { Loading } from "../components/UI";
 const AuthPage = lazy(() => import("../features/auth/AuthPage"));
+const AuthCallback = lazy(() => import("../features/auth/AuthCallback"));
 const Landing = lazy(() => import("../features/auth/Landing"));
 const Workspaces = lazy(() => import("../features/organizations/Workspaces"));
 const WorkspaceLayout = lazy(() => import("../layouts/WorkspaceLayout"));
@@ -25,6 +26,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
           path="/"
           element={user ? <Navigate to="/workspaces" replace /> : <Landing />}
@@ -36,6 +38,7 @@ function AppRoutes() {
           "reset-password",
           "verify-email",
           "accept-invitation",
+          "resend-confirmation",
         ].map((mode) => (
           <Route
             key={mode}

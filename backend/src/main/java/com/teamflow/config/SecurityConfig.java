@@ -1,8 +1,10 @@
 package com.teamflow.config;
 
+import com.teamflow.auth.SupabaseAuthService;
 import com.teamflow.security.RequestFilter;
 import java.util.List;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -23,7 +25,10 @@ public class SecurityConfig {
 
   @Bean
   SecurityFilterChain security(
-      HttpSecurity http, JdbcClient db, @Value("${teamflow.origin}") String origin)
+      HttpSecurity http,
+      JdbcClient db,
+      @Value("${teamflow.origin}") String origin,
+      ObjectProvider<SupabaseAuthService> supabase)
       throws Exception {
     var cors = new CorsConfiguration();
     cors.setAllowedOrigins(List.of(origin));
@@ -56,6 +61,8 @@ public class SecurityConfig {
                         "/api/v1/auth/forgot-password",
                         "/api/v1/auth/reset-password",
                         "/api/v1/auth/verify-email",
+                        "/api/v1/auth/callback",
+                        "/api/v1/auth/resend-confirmation",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html")
@@ -74,7 +81,9 @@ public class SecurityConfig {
                     .accessDeniedHandler(
                         (req, res, ex) ->
                             RequestFilter.problem(res, 403, "Access denied", MDC.get("requestId"))))
-        .addFilterBefore(new RequestFilter(db, origin), UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(
+            new RequestFilter(db, origin, supabase.getIfAvailable()),
+            UsernamePasswordAuthenticationFilter.class)
         .build();
   }
 }

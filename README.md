@@ -15,11 +15,19 @@ This is an implemented modular-monolith MVP, with hardening tracked in [PROGRESS
 
 No demo accounts or fake data are inserted. Create an account to start. Automated browser tests create synthetic accounts only in a separate test stack.
 
+## Preview
+
+![TeamFlow workspace dashboard with synthetic test data](docs/screenshots/workspace-desktop.png)
+
+The screenshot comes from an isolated browser-test workspace. See [screenshots and demo workflow](docs/screenshots/README.md).
+
 ## Start locally
+
+On this configured Windows machine, double-click `start.bat` to run with Supabase Database and Auth. It builds the backend when starting and reuses an already healthy app session. Open http://localhost:5173. Double-click `stop.bat` to stop the app; database data is retained. Both launchers work from any current directory and use the existing ignored local configuration.
 
 For **Windows development without Docker**, use the [native local setup](docs/deployment/LOCAL_WINDOWS.md). On this machine, run `powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1 -SkipBuild`; stop it with `scripts/stop-local.ps1`. The frontend, backend, database and development inbox run as local processes.
 
-For the hosted PostgreSQL option, see [Supabase setup](docs/deployment/SUPABASE.md). It keeps Spring Boot authentication and prepares a private-schema connection. Add credentials to `.env.supabase.local`, then explicitly choose `scripts/start-local.ps1 -Database Supabase`; the default remains the running native local database until that switch.
+For **Supabase PostgreSQL and Supabase Auth**, see [Supabase setup](docs/deployment/SUPABASE.md). Configure `.env.supabase.local` and authentication email redirects, then choose `scripts/start-local.ps1 -Database Supabase`. Spring Boot retains workspace/project authorization. The separate Local mode keeps offline development authentication.
 
 ### Docker option (for later)
 

@@ -71,6 +71,8 @@ public abstract class ApiTestSupport {
     }
     r.add("teamflow.bcrypt-cost", () -> 4);
     r.add("teamflow.secure-cookies", () -> false);
+    // MailService is mocked in API tests; do not require a developer's SMTP process.
+    r.add("management.health.mail.enabled", () -> false);
     r.add("debug", () -> false);
   }
 

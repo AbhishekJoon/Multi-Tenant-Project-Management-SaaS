@@ -1,5 +1,7 @@
 package com.teamflow.security;
 
+import com.teamflow.auth.SupabaseAuthService;
+import com.teamflow.common.ApiException;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import java.io.IOException;
@@ -14,13 +16,26 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class RequestFilter extends OncePerRequestFilter {
   private final JdbcClient db;
   private final String origin;
+  private final SupabaseAuthService supabase;
+  private static final Set<String> PUBLIC_AUTH =
+      Set.of(
+          "register",
+          "login",
+          "refresh",
+          "logout",
+          "forgot-password",
+          "reset-password",
+          "verify-email",
+          "callback",
+          "resend-confirmation");
   private final ConcurrentHashMap<String, Window> attempts = new ConcurrentHashMap<>();
 
   private record Window(long minute, int count) {}
 
-  public RequestFilter(JdbcClient db, String origin) {
+  public RequestFilter(JdbcClient db, String origin, SupabaseAuthService supabase) {
     this.db = db;
     this.origin = origin;
+    this.supabase = supabase;
   }
 
   @Override
@@ -60,7 +75,24 @@ public class RequestFilter extends OncePerRequestFilter {
         }
       }
       String auth = request.getHeader("Authorization");
-      if (auth != null && auth.startsWith("Bearer ") && auth.length() < 200) {
+      boolean publicAuth =
+          path.startsWith("/api/v1/auth/")
+              && PUBLIC_AUTH.contains(path.substring("/api/v1/auth/".length()));
+      if (supabase != null && auth != null && !publicAuth) {
+        try {
+          if (!auth.startsWith("Bearer ")
+              || auth.length() > 12007
+              || auth.substring(7).split("\\.", -1).length != 3)
+            throw ApiException.unauthenticated();
+          Actor actor = supabase.authenticate(auth.substring(7));
+          SecurityContextHolder.getContext()
+              .setAuthentication(new UsernamePasswordAuthenticationToken(actor, null, List.of()));
+        } catch (ApiException e) {
+          problem(response, e.status().value(), e.getMessage(), requestId);
+          return;
+        }
+      }
+      if (supabase == null && auth != null && auth.startsWith("Bearer ") && auth.length() < 200) {
         var actor =
             db.sql(
                     "SELECT u.id,u.email,u.name FROM refresh_tokens r JOIN users u ON"

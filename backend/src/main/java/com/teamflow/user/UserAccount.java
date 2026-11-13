@@ -17,8 +17,11 @@ public class UserAccount {
   @Column(nullable = false, length = 100)
   private String name;
 
-  @Column(name = "password_hash", nullable = false)
+  @Column(name = "password_hash")
   private String passwordHash;
+
+  @Column(name = "supabase_subject", unique = true)
+  private UUID supabaseSubject;
 
   @Column(nullable = false)
   private boolean enabled = true;

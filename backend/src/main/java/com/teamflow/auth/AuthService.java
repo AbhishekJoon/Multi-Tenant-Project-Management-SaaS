@@ -195,6 +195,7 @@ public class AuthService {
     users
         .findByEmail(email.trim().toLowerCase(Locale.ROOT))
         .filter(UserAccount::isEnabled)
+        .filter(user -> user.getPasswordHash() != null)
         .ifPresent(
             user -> {
               lockUser(user.getId());
@@ -240,6 +241,19 @@ public class AuthService {
     lockUser(id);
     var u = users.findById(id).orElseThrow(ApiException::unauthenticated);
     if (!u.isEmailVerified()) verification(u);
+  }
+
+  @Transactional
+  public void resendByEmail(String email) {
+    users
+        .findByEmail(email.trim().toLowerCase(Locale.ROOT))
+        .filter(UserAccount::isEnabled)
+        .filter(u -> !u.isEmailVerified())
+        .ifPresent(
+            user -> {
+              lockUser(user.getId());
+              verification(user);
+            });
   }
 
   private void verification(UserAccount user) {
