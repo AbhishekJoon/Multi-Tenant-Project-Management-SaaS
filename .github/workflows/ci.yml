@@ -25,7 +25,7 @@ jobs:
         env:
           DEBUG: 'false'
           TEAMFLOW_TEST_PRIVATE_SCHEMA: ${{ matrix.schema == 'supabase' }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: backend-reports-${{ matrix.schema }}
@@ -50,7 +50,7 @@ jobs:
       - run: npm run test:coverage
       - run: npm run build
       - run: npm audit --audit-level=high
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: frontend-coverage
@@ -75,7 +75,7 @@ jobs:
       - name: Stack logs
         if: failure()
         run: docker compose -p teamflow-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs --tail=100
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: browser-reports
