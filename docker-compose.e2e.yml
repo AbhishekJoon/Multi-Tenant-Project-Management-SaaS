@@ -1,0 +1,14 @@
+# Run with: docker compose -p teamflow-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+# A separate Compose project gives tests their own PostgreSQL volume and network.
+services:
+  db:
+    ports: !override ['127.0.0.1:5433:5432']
+  mailpit:
+    ports: !override ['127.0.0.1:8026:8025', '127.0.0.1:1026:1025']
+  backend:
+    ports: !override ['127.0.0.1:8081:8080']
+    environment:
+      APP_ORIGIN: http://localhost:5174
+      BCRYPT_COST: 4
+  frontend:
+    ports: !override ['127.0.0.1:5174:80']
