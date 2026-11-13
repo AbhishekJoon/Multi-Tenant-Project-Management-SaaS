@@ -45,6 +45,8 @@ management:
     health:
       show-details: never
 teamflow:
+  auth:
+    provider: local
   origin: ${APP_ORIGIN:http://localhost:5173}
   secure-cookies: ${SECURE_COOKIES:true}
   bcrypt-cost: ${BCRYPT_COST:12}

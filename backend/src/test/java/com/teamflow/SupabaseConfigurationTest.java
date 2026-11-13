@@ -25,6 +25,8 @@ class SupabaseConfigurationTest {
         .remove(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);
     environment.setActiveProfiles("supabase");
     var values = new HashMap<String, Object>();
+    values.put("SUPABASE_URL", "https://testproject.supabase.co");
+    values.put("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test-only");
     values.put("SUPABASE_DB_URL", "jdbc:postgresql://aws-0-test.pooler.supabase.com:5432/postgres");
     values.put("SUPABASE_DB_USER", "postgres.testproject");
     values.put("SUPABASE_DB_PASSWORD", "test-only-not-a-real-credential");
@@ -44,6 +46,21 @@ class SupabaseConfigurationTest {
   private void validate(ConfigurableEnvironment environment) {
     new SupabaseEnvironmentValidator()
         .postProcessEnvironment(environment, new SpringApplication(TeamFlowApplication.class));
+  }
+
+  @Test
+  void supabaseRequiresManagedAuthAndPublicKey() throws Exception {
+    for (var overrides :
+        List.<Map<String, Object>>of(
+            Map.of("teamflow.auth.provider", "local"),
+            Map.of("SUPABASE_PUBLISHABLE_KEY", ""),
+            Map.of("SUPABASE_PUBLISHABLE_KEY", "sb_secret_private-value"),
+            Map.of("SUPABASE_URL", "http://remote.example"))) {
+      var config = environment(overrides);
+      assertThatThrownBy(() -> validate(config))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageNotContaining("private-value");
+    }
   }
 
   @Test

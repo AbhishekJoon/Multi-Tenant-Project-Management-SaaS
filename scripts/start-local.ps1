@@ -1,5 +1,6 @@
 param(
   [switch]$SkipBuild,
+  [switch]$ReuseRunning,
   [ValidateSet('Local', 'Supabase')][string]$Database = 'Local',
   [string]$EnvFile
 )
@@ -31,6 +32,28 @@ if (($Database -eq 'Local' -and !(Test-Path -LiteralPath (Join-Path $postgresBin
   throw 'Portable PostgreSQL and Mailpit are required. See docs/deployment/LOCAL_WINDOWS.md.'
 }
 if (Test-Path -LiteralPath $statePath) {
+  if ($ReuseRunning) {
+    $saved = Get-Content -Raw -LiteralPath $statePath | ConvertFrom-Json
+    $saved = @($saved)
+    $canReuse = $saved.Count -eq 3 -and ((@($saved.name | Sort-Object) -join ',') -eq 'backend,frontend,mailpit')
+    foreach ($record in $saved) {
+      $existing = Get-Process -Id $record.id -ErrorAction SilentlyContinue
+      if (!$existing -or $record.database -ne $Database -or $existing.Path -ne $record.executable -or $existing.StartTime.ToUniversalTime().Ticks -ne $record.ticks) {
+        $canReuse = $false
+      }
+    }
+    if ($canReuse) {
+      foreach ($url in @('http://127.0.0.1:8025/readyz', 'http://127.0.0.1:8080/actuator/health', 'http://127.0.0.1:5173')) {
+        try {
+          if ((Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 3).StatusCode -ne 200) { $canReuse = $false }
+        } catch { $canReuse = $false }
+      }
+      if ($canReuse) {
+        Write-Output 'TeamFlow is already running locally: http://localhost:5173'
+        return
+      }
+    }
+  }
   throw 'A local process record already exists. Run scripts/stop-local.ps1 before starting again.'
 }
 $ports = @(1025, 8025, 8080, 5173)
@@ -70,14 +93,15 @@ $settings = @{
   SERVER_ADDRESS = '127.0.0.1'; SECURE_COOKIES = 'false'; OPENAPI_ENABLED = 'true'; DEBUG = 'false'
 }
 if ($Database -eq 'Supabase') {
-  foreach ($required in @('SUPABASE_DB_URL', 'SUPABASE_DB_USER', 'SUPABASE_DB_PASSWORD', 'SUPABASE_DB_SSL_ROOT_CERT')) {
+  foreach ($required in @('SUPABASE_DB_URL', 'SUPABASE_DB_USER', 'SUPABASE_DB_PASSWORD', 'SUPABASE_DB_SSL_ROOT_CERT', 'SUPABASE_URL')) {
     if (!$configuration[$required]) { throw "Set $required in .env.supabase.local before selecting Supabase." }
   }
+  if (!$configuration['SUPABASE_PUBLISHABLE_KEY'] -and !$configuration['SUPABASE_ANON_KEY']) { throw 'Set SUPABASE_PUBLISHABLE_KEY in .env.supabase.local to enable Supabase Auth.' }
   $certificatePath = $configuration['SUPABASE_DB_SSL_ROOT_CERT']
   if (![System.IO.Path]::IsPathRooted($certificatePath)) { $certificatePath = Join-Path $projectRoot $certificatePath }
   if (!(Test-Path -LiteralPath $certificatePath -PathType Leaf)) { throw 'Download the Supabase CA certificate and set SUPABASE_DB_SSL_ROOT_CERT before starting.' }
   foreach ($key in $configuration.Keys) {
-    if ($key -like 'SUPABASE_DB_*') { $settings[$key] = $configuration[$key] }
+    if ($key -like 'SUPABASE_DB_*' -or $key -in @('SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_ANON_KEY')) { $settings[$key] = $configuration[$key] }
   }
   $settings.Remove('DATABASE_PASSWORD'); $settings.Remove('DATABASE_USER')
   $settings.Remove('DATABASE_URL'); $settings.Remove('PGPASSWORD')

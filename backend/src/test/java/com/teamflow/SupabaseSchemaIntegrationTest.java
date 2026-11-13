@@ -23,7 +23,7 @@ class SupabaseSchemaIntegrationTest extends ApiTestSupport {
             db.sql("SELECT count(*) FROM teamflow.flyway_schema_history WHERE success")
                 .query(Long.class)
                 .single())
-        .isEqualTo(3);
+        .isEqualTo(4);
     assertThat(
             db.sql(
                     "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND"

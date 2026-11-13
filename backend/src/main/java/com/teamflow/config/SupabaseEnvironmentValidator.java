@@ -22,6 +22,26 @@ public class SupabaseEnvironmentValidator implements EnvironmentPostProcessor, O
   public void postProcessEnvironment(
       ConfigurableEnvironment environment, SpringApplication application) {
     if (!Arrays.asList(environment.getActiveProfiles()).contains("supabase")) return;
+    if (!"supabase".equals(environment.getProperty("teamflow.auth.provider")))
+      throw new IllegalStateException("The supabase profile requires Supabase Auth");
+    try {
+      URI authUrl = URI.create(required(environment, "SUPABASE_URL"));
+      if (!"https".equals(authUrl.getScheme())
+          || authUrl.getHost() == null
+          || authUrl.getRawUserInfo() != null
+          || authUrl.getRawQuery() != null
+          || authUrl.getRawFragment() != null
+          || !(authUrl.getPath().isEmpty() || authUrl.getPath().equals("/")))
+        throw new IllegalArgumentException();
+    } catch (IllegalArgumentException e) {
+      throw new IllegalStateException("SUPABASE_URL must be the HTTPS project origin");
+    }
+    String authKey =
+        environment.getProperty(
+            "SUPABASE_PUBLISHABLE_KEY", environment.getProperty("SUPABASE_ANON_KEY", ""));
+    if (authKey.isBlank() || authKey.startsWith("sb_secret_") || authKey.contains("replace-with"))
+      throw new IllegalStateException(
+          "Set SUPABASE_PUBLISHABLE_KEY to the public publishable or anon key");
     String url = required(environment, "SUPABASE_DB_URL");
     required(environment, "SUPABASE_DB_USER");
     required(environment, "SUPABASE_DB_PASSWORD");

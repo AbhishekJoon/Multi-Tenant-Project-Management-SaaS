@@ -12,7 +12,11 @@ Java 21 / Spring Boot 3.5, PostgreSQL 17 and Flyway power the backend. React / T
 
 ## Authentication decision
 
-Use random opaque bearer access tokens (15 minutes), kept only in client memory, and hashed refresh tokens in an HttpOnly cookie (7 days). Persist token digests only. Refresh families rotate under database locks; replay revokes the family and its access tokens. Logout revokes the family. Cookies require Secure in production. Refresh/logout additionally require an exact allowed Origin plus a custom header, with JSON requests and SameSite=Lax cookies; login uses the same origin guard. Password changes revoke all existing sessions. Account enabled state is read on each authenticated request. BCrypt cost is configurable. Development mail is an explicit local adapter; production requires SMTP configuration.
+Supabase mode delegates signup, login, refresh, verification and recovery to Supabase Auth. Access JWTs stay in browser memory; provider refresh tokens stay in an HttpOnly SameSite=Lax cookie. The backend verifies tokens through the authoritative `/auth/v1/user` endpoint, checks issuer/audience/role/expiry/subject, and reads managed session/account metadata to reject revoked, banned and deleted users. This supports current and legacy signing algorithms without sharing a signing secret. Provider outages fail closed; no validation cache is enabled, so protected requests incur provider latency.
+
+PKCE email flows use browser-bound HttpOnly verifier cookies and fixed callbacks. Recovery access stays in a separate short-lived HttpOnly cookie until password replacement; password changes request global logout. Only a provider-confirmed email can adopt a legacy account, preserving its application ID and memberships while removing legacy credentials/tokens. Metadata never supplies tenant roles. Account enabled state and membership policies remain current on each request. All API mutations require an exact allowed Origin and custom header; production cookies require HTTPS/Secure.
+
+The separate Local mode retains BCrypt, opaque 15-minute access tokens, hashed rotating refresh tokens and SMTP verification/recovery for offline development and existing tests.
 
 ## Tenant isolation and permissions
 
@@ -40,4 +44,4 @@ The browser serializes refresh-cookie rotations across tabs using the Web Locks 
 
 ## Supabase database option
 
-The user selected managed Supabase PostgreSQL while retaining Spring Boot authentication. The `supabase` profile uses a private `teamflow` schema, verified TLS, a small Hikari pool and Session/Direct connections on 5432. Flyway/JPA/JDBC agree on the schema; a profile-specific migration revokes Data API roles. Supabase Auth/client SDKs are not introduced. Backend membership checks and composite keys remain the tenant boundary; no Supabase JWT-based RLS policy is implied. See [setup and verification limits](docs/deployment/SUPABASE.md). Hosted connectivity is not verified before credentials are supplied.
+The `supabase` profile now selects managed PostgreSQL and Supabase Auth. It uses a private `teamflow` schema, verified TLS and Session/Direct connections on 5432. Flyway/JPA/JDBC agree on the schema; V3 revokes Data API roles and V4 adds provider-subject mapping without changing existing user IDs. Backend membership checks and composite keys remain the tenant boundary. No direct browser database access or JWT-based RLS implementation is introduced. See [setup and verification limits](docs/deployment/SUPABASE.md).

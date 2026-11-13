@@ -29,3 +29,8 @@ spring:
     create-schemas: false
     clean-disabled: true
     locations: classpath:db/migration,classpath:db/supabase
+teamflow:
+  auth:
+    provider: supabase
+    supabase-url: ${SUPABASE_URL}
+    supabase-key: ${SUPABASE_PUBLISHABLE_KEY:${SUPABASE_ANON_KEY:}}
