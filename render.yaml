@@ -5,7 +5,7 @@ services:
     plan: free
     dockerContext: .
     dockerfilePath: ./deploy/render/Dockerfile
-    autoDeployTrigger: off
+    autoDeployTrigger: "off"
     domains:
       - teamflow.abhishekjoon.com
     healthCheckPath: /actuator/health
