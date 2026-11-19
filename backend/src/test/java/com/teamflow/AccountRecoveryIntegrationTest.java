@@ -6,14 +6,25 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.bean.override.convention.TestBean;
 
 class AccountRecoveryIntegrationTest extends ApiTestSupport {
   @Autowired JdbcClient db;
+
+  @TestBean(methodName = "fixedRateLimitClock", enforceOverride = true)
+  Clock rateLimitClock;
+
+  static Clock fixedRateLimitClock() {
+    return Clock.fixed(Instant.parse("2026-01-01T12:00:30Z"), ZoneOffset.UTC);
+  }
 
   @Test
   void resetTokensExpireAreSingleUseAndRevokeSessions() throws Exception {

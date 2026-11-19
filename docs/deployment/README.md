@@ -2,6 +2,8 @@
 
 The Compose configuration is for local development. Production requires infrastructure and credentials chosen and supplied by the operator; no external deployment has been performed.
 
+For the portfolio demo on `teamflow.abhishekjoon.com`, follow the [Render and Cloudflare setup](RENDER.md).
+
 ## Production topology
 
 Serve the frontend and `/api` on one HTTPS origin through Nginx or a managed ingress. Run the Java 21 image behind the proxy on a private network. Use a supported managed PostgreSQL instance with TLS, restricted network access, automated backups and a separate least-privilege application identity. Run Flyway with a migration-capable identity during release if the application identity cannot create extensions/tables.

@@ -5,6 +5,7 @@ import com.teamflow.common.ApiException;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.MDC;
@@ -17,6 +18,7 @@ public class RequestFilter extends OncePerRequestFilter {
   private final JdbcClient db;
   private final String origin;
   private final SupabaseAuthService supabase;
+  private final Clock rateLimitClock;
   private static final Set<String> PUBLIC_AUTH =
       Set.of(
           "register",
@@ -32,10 +34,12 @@ public class RequestFilter extends OncePerRequestFilter {
 
   private record Window(long minute, int count) {}
 
-  public RequestFilter(JdbcClient db, String origin, SupabaseAuthService supabase) {
+  public RequestFilter(
+      JdbcClient db, String origin, SupabaseAuthService supabase, Clock rateLimitClock) {
     this.db = db;
     this.origin = origin;
     this.supabase = supabase;
+    this.rateLimitClock = rateLimitClock;
   }
 
   @Override
@@ -57,7 +61,7 @@ public class RequestFilter extends OncePerRequestFilter {
         }
       }
       if (path.startsWith("/api/v1/auth/") && "POST".equals(request.getMethod())) {
-        long minute = System.currentTimeMillis() / 60000;
+        long minute = rateLimitClock.millis() / 60000;
         if (attempts.size() > 10000)
           attempts.entrySet().removeIf(e -> e.getValue().minute() < minute);
         String key = request.getRemoteAddr();

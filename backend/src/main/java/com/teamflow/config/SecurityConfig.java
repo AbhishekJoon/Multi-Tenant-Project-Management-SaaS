@@ -2,6 +2,7 @@ package com.teamflow.config;
 
 import com.teamflow.auth.SupabaseAuthService;
 import com.teamflow.security.RequestFilter;
+import java.time.Clock;
 import java.util.List;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.ObjectProvider;
@@ -24,9 +25,15 @@ public class SecurityConfig {
   }
 
   @Bean
+  Clock rateLimitClock() {
+    return Clock.systemUTC();
+  }
+
+  @Bean
   SecurityFilterChain security(
       HttpSecurity http,
       JdbcClient db,
+      Clock rateLimitClock,
       @Value("${teamflow.origin}") String origin,
       ObjectProvider<SupabaseAuthService> supabase)
       throws Exception {
@@ -82,7 +89,7 @@ public class SecurityConfig {
                         (req, res, ex) ->
                             RequestFilter.problem(res, 403, "Access denied", MDC.get("requestId"))))
         .addFilterBefore(
-            new RequestFilter(db, origin, supabase.getIfAvailable()),
+            new RequestFilter(db, origin, supabase.getIfAvailable(), rateLimitClock),
             UsernamePasswordAuthenticationFilter.class)
         .build();
   }
